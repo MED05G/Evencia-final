@@ -18,7 +18,7 @@ def get_events(query='', category='', limit=6, page=1):
     try:
         sql = "SELECT * FROM events"
         result = session.execute(text(sql))
-        events = [dict(row) for row in result]
+        events = [dict(row._mapping) for row in result]
         return {
             "data": events,
             "totalPages": 1  
@@ -31,7 +31,7 @@ def get_event_by_id(event_id):
     try:
         sql = "SELECT * FROM events WHERE id = :event_id"
         result = session.execute(text(sql), {"event_id": event_id}).fetchone()
-        return dict(result) if result else None
+        return dict(result._mapping) if result else None
     finally:
         session.close()
 
@@ -39,6 +39,19 @@ def create_event(data):
     session = SessionLocal()
     try:
         print("DATA RECEIVED:", data)
+        mapped_data = {
+            "title": data.get("title"),
+            "description": data.get("description"),
+            "location": data.get("location"),
+            "image_url": data.get("imageUrl") or "https://example.com/default.jpg",
+            "start_date_time": data.get("startDateTime"),
+            "end_date_time": data.get("endDateTime"),
+            "price": data.get("price") or "0.00",
+            "is_free": data.get("isFree", False),
+            "url": data.get("url"),
+            "category_id": data.get("categoryId"),
+            "organizer_id": data.get("createdBy"),
+        }
         sql = text("""
             INSERT INTO events (
                 title, description, location, image_url, start_date_time, end_date_time,
@@ -50,9 +63,12 @@ def create_event(data):
             )
             RETURNING *
         """)
-        result = session.execute(sql, data)
+        result = session.execute(sql, mapped_data)
         session.commit()
-        return dict(result.fetchone())
+        row = result.fetchone()
+        if row is None:
+            return None
+        return dict(row._mapping)
     except Exception as e:
         print("CREATE EVENT ERROR:", e)
         raise
@@ -73,7 +89,7 @@ def update_event(event_id, data):
         data["event_id"] = event_id
         result = session.execute(sql, data)
         session.commit()
-        return dict(result.fetchone())
+        return dict(row._mapping) if row else None
     finally:
         session.close()
 
@@ -92,7 +108,7 @@ def get_users():
     try:
         sql = "SELECT * FROM users"
         result = session.execute(text(sql))
-        return [dict(row) for row in result]
+        return [dict(row._mapping) for row in result]
     finally:
         session.close()
 
@@ -101,7 +117,7 @@ def get_user_by_id(user_id):
     try:
         sql = "SELECT * FROM users WHERE id = :user_id"
         result = session.execute(text(sql), {"user_id": user_id}).fetchone()
-        return dict(result) if result else None
+        return dict(result._mapping) if result else None
     finally:
         session.close()
 
@@ -110,7 +126,7 @@ def get_user_by_clerk_id(clerk_id):
     try:
         sql = "SELECT * FROM users WHERE clerk_id = :clerk_id"
         result = session.execute(text(sql), {"clerk_id": clerk_id}).fetchone()
-        return dict(result) if result else None
+        return dict(result._mapping) if result else None
     finally:
         session.close()
 
@@ -124,7 +140,9 @@ def create_user(data):
         """)
         result = session.execute(sql, data)
         session.commit()
-        return dict(result.fetchone())
+        
+        row = result.fetchone()
+        return dict(row._mapping) if row else None
     finally:
         session.close()
 
@@ -140,7 +158,8 @@ def update_user(user_id, data):
         data["user_id"] = user_id
         result = session.execute(sql, data)
         session.commit()
-        return dict(result.fetchone())
+        row = result.fetchone()
+        return dict(row._mapping) if row else None
     finally:
         session.close()
 
@@ -159,7 +178,7 @@ def get_categories():
     try:
         sql = "SELECT * FROM categories"
         result = session.execute(text(sql))
-        return [dict(row) for row in result]
+        return [dict(row._mapping) for row in result]
     finally:
         session.close()
 
@@ -173,6 +192,7 @@ def create_category(data):
         """)
         result = session.execute(sql, data)
         session.commit()
-        return dict(result.fetchone())
+        row = result.fetchone()
+        return dict(row._mapping) if row else None
     finally:
         session.close()
