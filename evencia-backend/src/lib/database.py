@@ -21,7 +21,7 @@ def get_events(query='', category='', limit=6, page=1):
         events = [dict(row) for row in result]
         return {
             "data": events,
-            "totalPages": 1  # You should implement real pagination
+            "totalPages": 1  
         }
     finally:
         session.close()
@@ -38,16 +38,27 @@ def get_event_by_id(event_id):
 def create_event(data):
     session = SessionLocal()
     try:
+        print("DATA RECEIVED:", data)
         sql = text("""
-            INSERT INTO events (title, description, category_id, organizer_first_name, organizer_last_name, image_url, price, is_free, url, created_at, updated_at)
-            VALUES (:title, :description, :category_id, :organizer_first_name, :organizer_last_name, :image_url, :price, :is_free, :url, NOW(), NOW())
+            INSERT INTO events (
+                title, description, location, image_url, start_date_time, end_date_time,
+                price, is_free, url, category_id, organizer_id, created_at, updated_at
+            )
+            VALUES (
+                :title, :description, :location, :image_url, :start_date_time, :end_date_time,
+                :price, :is_free, :url, :category_id, :organizer_id, NOW(), NOW()
+            )
             RETURNING *
         """)
         result = session.execute(sql, data)
         session.commit()
         return dict(result.fetchone())
+    except Exception as e:
+        print("CREATE EVENT ERROR:", e)
+        raise
     finally:
         session.close()
+
 
 def update_event(event_id, data):
     session = SessionLocal()
